@@ -1,3 +1,4 @@
+import '../models/meal_plan.dart';
 import '../models/recipe.dart';
 import 'recipe_repository.dart';
 
@@ -153,13 +154,210 @@ List<Recipe> demoRecipes(int userId) {
         ('Servir avec le riz.', null),
       ]),
     ),
+    ...moreDemoRecipes(userId),
   ];
 }
 
-/// Insère les recettes de démo si l'utilisateur n'a encore aucune recette.
+/// Recettes de démo supplémentaires (version 2) : assez de recettes compatibles
+/// avec le foyer pour remplir les 21 créneaux du menu et tester tri et stats.
+List<Recipe> moreDemoRecipes(int userId) {
+  RecipeIngredient i(String name, [double? q, String? unit]) =>
+      RecipeIngredient(name: name, quantity: q, unit: unit);
+  List<RecipeStep> steps(List<(String, int?)> s) => [
+        for (var n = 0; n < s.length; n++) RecipeStep(number: n + 1, text: s[n].$1, durationMin: s[n].$2),
+      ];
+  Recipe r(String title, String category, int prep, int servings, double kcal, List<RecipeIngredient> ingredients,
+          List<(String, int?)> s) =>
+      Recipe(
+        userId: userId,
+        title: title,
+        category: category,
+        prepTimeMin: prep,
+        baseServings: servings,
+        caloriesPerServing: kcal,
+        ingredients: ingredients,
+        steps: steps(s),
+      );
+
+  return [
+    // Petits-déjeuners
+    r('Crêpes', 'Breakfast', 25, 4, 260, [i('Farine', 250, 'g'), i('Oeuf', 3, 'pièce'), i('Lait', 500, 'ml'), i('Sucre', 30, 'g'), i('Huile d\'olive', 1, 'cas')], [
+      ('Mélanger farine, sucre et oeufs, puis ajouter le lait petit à petit.', 5),
+      ('Laisser reposer la pâte 10 minutes.', 10),
+      ('Cuire les crêpes une à une dans une poêle huilée.', 10),
+    ]),
+    r('Bsissa', 'Breakfast', 5, 2, 380, [i('Farine de blé grillé', 80, 'g'), i('Huile d\'olive', 2, 'cas'), i('Miel', 2, 'cas'), i('Eau', 100, 'ml')], [
+      ('Mélanger la farine avec l\'eau et l\'huile.', 3),
+      ('Ajouter le miel et servir.', null),
+    ]),
+    r('Yaourt aux fruits et flocons d\'avoine', 'Breakfast', 5, 2, 290, [i('Yaourt', 2, 'pièce'), i('Flocons d\'avoine', 60, 'g'), i('Banane', 1, 'pièce'), i('Miel', 1, 'cas')], [
+      ('Couper la banane en rondelles.', null),
+      ('Mélanger yaourt, flocons, banane et miel.', null),
+    ]),
+    r('Pain perdu', 'Breakfast', 15, 2, 340, [i('Pain', 4, 'tranche'), i('Oeuf', 2, 'pièce'), i('Lait', 200, 'ml'), i('Sucre', 20, 'g'), i('Beurre', 15, 'g')], [
+      ('Battre oeufs, lait et sucre.', null),
+      ('Tremper les tranches de pain.', null),
+      ('Dorer au beurre 3 minutes de chaque côté.', 6),
+    ]),
+    r('Oeufs brouillés et pain grillé', 'Breakfast', 10, 2, 310, [i('Oeuf', 4, 'pièce'), i('Pain', 2, 'tranche'), i('Beurre', 10, 'g'), i('Sel')], [
+      ('Griller le pain.', 3),
+      ('Cuire les oeufs battus au beurre en remuant 4 minutes.', 4),
+    ]),
+    r('Smoothie banane dattes', 'Breakfast', 5, 2, 240, [i('Banane', 2, 'pièce'), i('Dattes', 6, 'pièce'), i('Lait', 400, 'ml')], [
+      ('Dénoyauter les dattes.', null),
+      ('Mixer tous les ingrédients 1 minute.', 1),
+    ]),
+    // Plats
+    r('Tajine de poulet aux olives', 'Plat', 60, 4, 520, [i('Poulet', 800, 'g'), i('Olives vertes', 150, 'g'), i('Citron confit', 1, 'pièce'), i('Oignon', 2, 'pièce'), i('Ail', 3, 'gousse'), i('Huile d\'olive', 3, 'cas'), i('Curcuma', 1, 'cac')], [
+      ('Faire revenir le poulet, l\'oignon et l\'ail avec le curcuma.', 10),
+      ('Couvrir d\'eau et mijoter 35 minutes.', 35),
+      ('Ajouter olives et citron confit, cuire encore 10 minutes.', 10),
+    ]),
+    r('Kafteji', 'Plat', 45, 4, 480, [i('Pomme de terre', 3, 'pièce'), i('Poivron', 2, 'pièce'), i('Courgette', 2, 'pièce'), i('Potiron', 300, 'g'), i('Oeuf', 4, 'pièce'), i('Huile d\'olive', 5, 'cas'), i('Harissa', 1, 'cac')], [
+      ('Frire séparément les légumes coupés en morceaux.', 25),
+      ('Frire les oeufs.', 5),
+      ('Hacher le tout grossièrement avec la harissa.', 5),
+    ]),
+    r('Spaghetti bolognaise', 'Plat', 40, 4, 610, [i('Spaghetti', 400, 'g'), i('Viande hachée', 400, 'g'), i('Tomate', 4, 'pièce'), i('Oignon', 1, 'pièce'), i('Ail', 2, 'gousse'), i('Huile d\'olive', 2, 'cas')], [
+      ('Faire revenir oignon, ail et viande hachée 10 minutes.', 10),
+      ('Ajouter les tomates et mijoter 20 minutes.', 20),
+      ('Cuire les spaghetti 10 minutes et mélanger avec la sauce.', 10),
+    ]),
+    r('Poisson grillé et légumes', 'Plat', 30, 2, 420, [i('Daurade', 2, 'pièce'), i('Courgette', 1, 'pièce'), i('Poivron', 1, 'pièce'), i('Citron', 1, 'pièce'), i('Huile d\'olive', 2, 'cas'), i('Sel')], [
+      ('Assaisonner les poissons avec citron, sel et huile.', 5),
+      ('Griller les poissons 8 minutes de chaque côté.', 16),
+      ('Griller les légumes en tranches 10 minutes.', 10),
+    ]),
+    r('Mloukhia', 'Plat', 150, 4, 560, [i('Poudre de mloukhia', 60, 'g'), i('Boeuf', 500, 'g'), i('Huile d\'olive', 200, 'ml'), i('Ail', 4, 'gousse'), i('Laurier', 2, 'feuille')], [
+      ('Délayer la poudre dans l\'huile et chauffer 10 minutes.', 10),
+      ('Ajouter eau, viande, ail et laurier.', null),
+      ('Mijoter à feu doux 2 heures en remuant.', 120),
+    ]),
+    r('Ojja merguez', 'Plat', 25, 3, 540, [i('Merguez', 6, 'pièce'), i('Tomate', 4, 'pièce'), i('Oeuf', 4, 'pièce'), i('Harissa', 1, 'cac'), i('Ail', 2, 'gousse'), i('Huile d\'olive', 2, 'cas')], [
+      ('Dorer les merguez coupées 5 minutes.', 5),
+      ('Ajouter tomates, ail et harissa, cuire 10 minutes.', 10),
+      ('Casser les oeufs dessus et cuire 5 minutes.', 5),
+    ]),
+    r('Gratin de pâtes au poulet', 'Plat', 45, 4, 650, [i('Pâtes', 400, 'g'), i('Poulet', 300, 'g'), i('Fromage râpé', 150, 'g'), i('Crème', 200, 'ml'), i('Oignon', 1, 'pièce')], [
+      ('Cuire les pâtes 10 minutes.', 10),
+      ('Faire revenir le poulet et l\'oignon 10 minutes.', 10),
+      ('Mélanger avec la crème, couvrir de fromage et gratiner 20 minutes.', 20),
+    ]),
+    r('Riz sauté aux légumes', 'Plat', 25, 3, 430, [i('Riz', 250, 'g'), i('Carotte', 2, 'pièce'), i('Petits pois', 150, 'g'), i('Oeuf', 2, 'pièce'), i('Sauce soja', 2, 'cas'), i('Huile d\'olive', 2, 'cas')], [
+      ('Cuire le riz 15 minutes et le laisser refroidir.', 15),
+      ('Sauter carottes et petits pois 5 minutes.', 5),
+      ('Ajouter le riz, les oeufs battus et la sauce soja, sauter 3 minutes.', 3),
+    ]),
+    r('Burger maison', 'Plat', 25, 4, 690, [i('Pain burger', 4, 'pièce'), i('Viande hachée', 500, 'g'), i('Fromage', 4, 'tranche'), i('Tomate', 1, 'pièce'), i('Salade', 1, 'pièce'), i('Oignon', 1, 'pièce')], [
+      ('Former 4 steaks avec la viande hachée.', 5),
+      ('Cuire les steaks 4 minutes de chaque côté, ajouter le fromage.', 8),
+      ('Monter les burgers avec salade, tomate et oignon.', null),
+    ]),
+    r('Lentilles corail au curry', 'Plat', 30, 4, 390, [i('Lentilles corail', 250, 'g'), i('Lait de coco', 400, 'ml'), i('Oignon', 1, 'pièce'), i('Curry', 2, 'cac'), i('Tomate', 2, 'pièce')], [
+      ('Faire revenir l\'oignon avec le curry.', 5),
+      ('Ajouter lentilles, tomates, lait de coco et 300 ml d\'eau.', null),
+      ('Cuire 20 minutes en remuant.', 20),
+    ]),
+    // Soupes et entrées
+    r('Chorba frik', 'Soupe', 50, 4, 330, [i('Frik', 100, 'g'), i('Agneau', 300, 'g'), i('Tomate', 2, 'pièce'), i('Oignon', 1, 'pièce'), i('Pois chiches', 100, 'g'), i('Huile d\'olive', 2, 'cas')], [
+      ('Faire revenir l\'agneau et l\'oignon 10 minutes.', 10),
+      ('Ajouter tomates, pois chiches et 1,5 litre d\'eau, cuire 20 minutes.', 20),
+      ('Ajouter le frik et cuire encore 15 minutes.', 15),
+    ]),
+    r('Velouté de potiron', 'Soupe', 35, 4, 210, [i('Potiron', 800, 'g'), i('Pomme de terre', 1, 'pièce'), i('Oignon', 1, 'pièce'), i('Crème', 100, 'ml')], [
+      ('Couper les légumes en cubes.', 5),
+      ('Cuire dans 1 litre d\'eau 25 minutes.', 25),
+      ('Mixer avec la crème.', null),
+    ]),
+    r('Salade tunisienne', 'Entrée', 15, 4, 220, [i('Tomate', 3, 'pièce'), i('Concombre', 1, 'pièce'), i('Oignon', 1, 'pièce'), i('Thon', 160, 'g'), i('Oeuf', 2, 'pièce'), i('Huile d\'olive', 3, 'cas')], [
+      ('Cuire les oeufs durs 10 minutes.', 10),
+      ('Couper tomates, concombre et oignon en petits dés.', 5),
+      ('Ajouter thon, oeufs et huile d\'olive.', null),
+    ]),
+    r('Brick au thon', 'Entrée', 20, 4, 290, [i('Feuilles de brick', 4, 'pièce'), i('Thon', 160, 'g'), i('Oeuf', 4, 'pièce'), i('Persil'), i('Huile de friture', 500, 'ml')], [
+      ('Garnir chaque feuille de thon et de persil.', null),
+      ('Casser un oeuf au centre et plier en triangle.', null),
+      ('Frire 2 minutes de chaque côté.', 4),
+    ]),
+    // Desserts
+    r('Assida zgougou', 'Dessert', 90, 6, 450, [i('Graines de pin d\'Alep', 250, 'g'), i('Farine', 100, 'g'), i('Sucre', 150, 'g'), i('Lait', 500, 'ml'), i('Crème', 200, 'ml')], [
+      ('Mixer les graines et filtrer pour obtenir un jus.', 20),
+      ('Cuire le jus avec la farine et le sucre 45 minutes en remuant.', 45),
+      ('Napper de crème au lait refroidie.', 20),
+    ]),
+    r('Salade de fruits', 'Dessert', 10, 4, 150, [i('Pomme', 2, 'pièce'), i('Orange', 2, 'pièce'), i('Banane', 2, 'pièce'), i('Sucre', 20, 'g')], [
+      ('Couper les fruits en morceaux.', 10),
+      ('Saupoudrer de sucre et mettre au frais.', null),
+    ]),
+  ];
+}
+
+/// Version des données de démo : à augmenter quand on ajoute des recettes de
+/// démo, pour que les bases déjà créées les reçoivent aussi.
+const _demoSeedVersion = 2;
+const _demoSeedKey = 'demo.seed_version';
+
+/// Insère les recettes de démo manquantes (comparaison par titre).
+/// Au premier lancement : toutes les recettes de démo. Après une mise à jour des
+/// données de démo : seulement les nouvelles. Une recette de démo supprimée par
+/// l'utilisateur n'est pas recréée tant que la version ne change pas.
 Future<void> seedDemoRecipesIfEmpty(RecipeRepository repo, int userId) async {
-  if (await repo.countRecipes(userId) > 0) return;
-  for (final r in demoRecipes(userId)) {
-    await repo.insertRecipe(r);
+  final stored = int.tryParse(await repo.getSetting(_demoSeedKey) ?? '');
+  // Bases créées avant le numéro de version : elles ont déjà la version 1.
+  final version = stored ?? (await repo.countRecipes(userId) > 0 ? 1 : 0);
+  if (version >= _demoSeedVersion) return;
+
+  final all = demoRecipes(userId);
+  final toInsert = version == 0 ? all : moreDemoRecipes(userId);
+  final existing = (await repo.listRecipes(userId)).map((r) => r.title).toSet();
+  for (final r in toInsert) {
+    if (!existing.contains(r.title)) await repo.insertRecipe(r);
   }
+  await repo.setSetting(_demoSeedKey, '$_demoSeedVersion');
+}
+
+/// Historique de repas cuisinés sur les 3 semaines passées et jusqu'à hier,
+/// pour que l'écran Statistiques ait des données. Ne remplit que les créneaux
+/// libres et ne retire rien du stock (ce sont des repas « passés »).
+/// Ne s'exécute qu'une fois.
+Future<int> seedDemoMealHistory(RecipeRepository repo, int userId, DateTime today) async {
+  const key = 'demo.history_seeded';
+  if (await repo.getSetting(key) != null) return 0;
+
+  final recipes = (await repo.listRecipes(userId)).where((r) => r.id != null && r.title != 'Poulet sauce cacahuète').toList();
+  bool isBreakfast(Recipe r) => r.category == 'Breakfast';
+  final breakfasts = recipes.where(isBreakfast).toList();
+  final mains = recipes.where((r) => !isBreakfast(r) && r.category != 'Dessert').toList();
+  if (breakfasts.isEmpty || mains.isEmpty) return 0;
+
+  final from = addDays(weekStartOf(today), -21);
+  final to = addDays(dateOnly(today), -1);
+  final taken = {
+    for (final p in await repo.mealPlansBetween(userId, from, to)) '${dateKey(p.date)}|${p.meal.dbValue}',
+  };
+
+  // Générateur déterministe : toujours le même historique.
+  var seed = 7;
+  int next(int max) => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) % max;
+
+  var n = 0;
+  for (var d = from; !d.isAfter(to); d = addDays(d, 1)) {
+    for (final meal in MealType.values) {
+      if (taken.contains('${dateKey(d)}|${meal.dbValue}')) continue;
+      if (next(100) < 20) continue; // ~20 % de repas non planifiés
+      final pool = meal == MealType.breakfast ? breakfasts : mains;
+      final recipe = pool[next(pool.length)];
+      await repo.insertMealPlan(MealPlan(
+        date: d,
+        meal: meal,
+        recipeId: recipe.id!,
+        servings: 3,
+        status: MealStatus.cooked,
+        cookedAt: DateTime(d.year, d.month, d.day, switch (meal) { MealType.breakfast => 8, MealType.lunch => 13, MealType.dinner => 20 }),
+      ));
+      n++;
+    }
+  }
+  await repo.setSetting(key, '1');
+  return n;
 }

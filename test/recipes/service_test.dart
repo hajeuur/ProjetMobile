@@ -118,13 +118,29 @@ void main() {
     final titles = menu.entries.map((e) => e.recipe.title).toList();
     expect(titles, isNot(contains('Poulet sauce cacahuète'))); // allergie arachide du foyer
     expect(titles.toSet().length, titles.length);
-    expect(menu.entries.length, 9);
+    expect(menu.entries.length, 21); // assez de recettes de démo pour les 21 créneaux
+    expect(menu.unfilled, isEmpty);
 
     await service.applyMenu(week, menu);
-    expect((await service.week(week)).length, 9);
+    expect((await service.week(week)).length, 21);
 
-    // Régénérer en gardant l'existant : plus aucune recette disponible.
+    // Régénérer en gardant l'existant : plus aucun créneau libre.
     expect((await service.proposeWeekMenu(week)).entries, isEmpty);
+  });
+
+  test('données de démo : nouvelles recettes ajoutées une fois, historique pour les stats', () async {
+    await seedDemoRecipesIfEmpty(service.repository, 1);
+    final count = (await service.recipes()).length;
+    expect(count, demoRecipes(1).length);
+    await seedDemoRecipesIfEmpty(service.repository, 1);
+    expect((await service.recipes()).length, count);
+
+    final n = await seedDemoMealHistory(service.repository, 1, today);
+    expect(n, greaterThan(30));
+    expect(await seedDemoMealHistory(service.repository, 1, today), 0);
+    expect(await service.mostCooked(), isNotEmpty);
+    // Rien dans le futur : aujourd'hui reste libre.
+    expect((await service.week(weekStartOf(today))).where((p) => !p.date.isBefore(dateOnly(today))), isEmpty);
   });
 
   test('import TheMealDB : conversion, doublon évité, cache', () async {

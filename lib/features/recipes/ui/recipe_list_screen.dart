@@ -144,6 +144,7 @@ class _AddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => FloatingActionButton.extended(
+        heroTag: 'fab-recettes',
         icon: const Icon(Icons.add),
         label: const Text('Ajouter'),
         onPressed: () => showModalBottomSheet(

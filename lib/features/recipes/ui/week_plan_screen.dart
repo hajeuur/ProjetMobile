@@ -43,6 +43,7 @@ class WeekPlanScreen extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab-planning',
         icon: const Icon(Icons.auto_awesome),
         label: const Text('Générer le menu'),
         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MenuGenerationScreen())),

@@ -4,9 +4,13 @@ import 'package:provider/provider.dart';
 import '../logic/calorie_estimator.dart';
 import '../models/recipe.dart';
 import '../services/recipe_service.dart';
+import 'form_pickers.dart';
 import 'widgets.dart';
 
 /// Création et édition d'une recette (ingrédients et étapes compris).
+///
+/// Les champs chiffrés, la catégorie et l'unité sont des [ComboTextField] :
+/// on peut taper la valeur ou la choisir dans une liste (bouton ▼).
 class RecipeEditScreen extends StatefulWidget {
   const RecipeEditScreen({super.key, this.recipe});
   final Recipe? recipe;
@@ -18,7 +22,7 @@ class RecipeEditScreen extends StatefulWidget {
 class _IngredientRow {
   _IngredientRow([RecipeIngredient? i])
       : name = TextEditingController(text: i?.name ?? ''),
-        qty = TextEditingController(text: i?.quantity == null ? '' : formatQuantity(i!.quantity!)),
+        qty = TextEditingController(text: i?.quantity == null ? '' : formatDecimal(i!.quantity!)),
         unit = TextEditingController(text: i?.unit ?? ''),
         productId = i?.productId;
   final TextEditingController name;
@@ -30,7 +34,7 @@ class _IngredientRow {
     if (name.text.trim().isEmpty) return null;
     return RecipeIngredient(
       name: name.text.trim(),
-      quantity: double.tryParse(qty.text.trim().replaceAll(',', '.')),
+      quantity: parseDecimal(qty.text),
       unit: unit.text.trim().isEmpty ? null : unit.text.trim(),
       productId: productId,
     );
@@ -62,7 +66,8 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
   late final TextEditingController _category;
   late final TextEditingController _prep;
   late final TextEditingController _calories;
-  late final TextEditingController _photo;
+  String? _photo;
+  List<ComboOption> _categories = categoryOptions(const []);
   late int _servings;
   late final List<_IngredientRow> _ingredients;
   late final List<_StepRow> _steps;
@@ -77,18 +82,25 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
     _title = TextEditingController(text: r?.title ?? '');
     _category = TextEditingController(text: r?.category ?? '');
     _prep = TextEditingController(text: r?.prepTimeMin?.toString() ?? '');
-    _calories = TextEditingController(text: r?.caloriesPerServing?.round().toString() ?? '');
-    _photo = TextEditingController(text: r?.photo ?? '');
+    _calories = TextEditingController(text: r?.caloriesPerServing == null ? '' : formatDecimal(r!.caloriesPerServing!));
+    _photo = r?.photo;
     _servings = r?.baseServings ?? 2;
     _ingredients = [for (final i in r?.ingredients ?? const <RecipeIngredient>[]) _IngredientRow(i)];
     if (_ingredients.isEmpty) _ingredients.add(_IngredientRow());
     _steps = [for (final s in r?.steps ?? const <RecipeStep>[]) _StepRow(s)];
     if (_steps.isEmpty) _steps.add(_StepRow());
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final service = context.read<RecipeService>();
+    final used = await service.repository.categories(service.userId);
+    if (mounted) setState(() => _categories = categoryOptions(used));
   }
 
   @override
   void dispose() {
-    for (final c in [_title, _category, _prep, _calories, _photo]) {
+    for (final c in [_title, _category, _prep, _calories]) {
       c.dispose();
     }
     for (final i in _ingredients) {
@@ -100,8 +112,7 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
     super.dispose();
   }
 
-  List<RecipeIngredient> get _currentIngredients =>
-      [for (final r in _ingredients) ?r.toIngredient()];
+  List<RecipeIngredient> get _currentIngredients => [for (final r in _ingredients) ?r.toIngredient()];
 
   void _estimate() {
     final e = estimateCalories(_currentIngredients, _servings);
@@ -109,13 +120,16 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
       showSnack(context, 'Aucun ingrédient reconnu pour l\'estimation (indiquez quantités et unités).');
       return;
     }
-    setState(() => _calories.text = e.perServing.round().toString());
+    setState(() => _calories.text = formatDecimal(e.perServing.roundToDouble()));
     showSnack(context,
         'Estimation sur ${e.coveredIngredients}/${e.totalIngredients} ingrédients${e.reliable ? '' : ' (peu fiable)'}.');
   }
 
   Future<void> _save() async {
-    if (!_form.currentState!.validate()) return;
+    if (!_form.currentState!.validate()) {
+      showSnack(context, 'Corrigez les champs en rouge.');
+      return;
+    }
     final ingredients = _currentIngredients;
     if (ingredients.isEmpty) {
       showSnack(context, 'Ajoutez au moins un ingrédient.');
@@ -127,21 +141,21 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
       steps.add(RecipeStep(
         number: steps.length + 1,
         text: s.text.text.trim(),
-        durationMin: int.tryParse(s.duration.text.trim()),
+        durationMin: parseWhole(s.duration.text),
       ));
     }
     final service = context.read<RecipeService>();
-    String? opt(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
+    final category = _category.text.trim();
     final base = widget.recipe ?? Recipe(userId: service.userId, title: '');
     final recipe = Recipe(
       id: base.id,
       userId: base.userId,
       title: _title.text.trim(),
-      category: opt(_category),
-      prepTimeMin: int.tryParse(_prep.text.trim()),
+      category: category.isEmpty ? null : category,
+      prepTimeMin: parseWhole(_prep.text),
       baseServings: _servings,
-      caloriesPerServing: double.tryParse(_calories.text.trim().replaceAll(',', '.')),
-      photo: opt(_photo),
+      caloriesPerServing: parseDecimal(_calories.text),
+      photo: _photo,
       source: base.source,
       externalId: base.externalId,
       createdAt: base.createdAt,
@@ -163,6 +177,7 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const decimalKeyboard = TextInputType.numberWithOptions(decimal: true);
     return Scaffold(
       appBar: AppBar(
         title: Text(_isNew ? 'Nouvelle recette' : 'Modifier la recette'),
@@ -173,6 +188,9 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
       body: Form(
         key: _form,
         child: ListView(padding: const EdgeInsets.all(16), children: [
+          Text('Tapez une valeur ou choisissez-la dans la liste avec ▼.',
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+          const SizedBox(height: 12),
           TextFormField(
             controller: _title,
             decoration: const InputDecoration(labelText: 'Titre *', border: OutlineInputBorder()),
@@ -180,21 +198,25 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
             validator: (v) => (v == null || v.trim().isEmpty) ? 'Titre obligatoire' : null,
           ),
           const SizedBox(height: 12),
-          Row(children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(
-              child: TextFormField(
+              child: ComboTextField(
                 controller: _category,
-                decoration: const InputDecoration(labelText: 'Catégorie', hintText: 'Plat, Soupe, Breakfast…', border: OutlineInputBorder()),
+                options: _categories,
+                label: 'Catégorie',
+                textCapitalization: TextCapitalization.sentences,
               ),
             ),
             const SizedBox(width: 12),
             SizedBox(
-              width: 120,
-              child: TextFormField(
+              width: 140,
+              child: ComboTextField(
                 controller: _prep,
+                options: prepTimeOptions,
+                label: 'Temps',
+                suffixText: 'min',
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Temps (min)', border: OutlineInputBorder()),
-                validator: (v) => (v != null && v.trim().isNotEmpty && int.tryParse(v.trim()) == null) ? 'Nombre' : null,
+                validator: validateWhole,
               ),
             ),
           ]),
@@ -205,26 +227,26 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
             Stepper1(value: _servings, onChanged: (v) => setState(() => _servings = v)),
           ]),
           const SizedBox(height: 12),
-          Row(children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(
-              child: TextFormField(
+              child: ComboTextField(
                 controller: _calories,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Calories par portion', suffixText: 'kcal', border: OutlineInputBorder()),
-                validator: (v) => (v != null && v.trim().isNotEmpty && double.tryParse(v.trim().replaceAll(',', '.')) == null)
-                    ? 'Nombre'
-                    : null,
+                options: calorieOptions,
+                label: 'Calories par portion',
+                suffixText: 'kcal',
+                helperText: 'Virgule acceptée (ex. 320,5)',
+                keyboardType: decimalKeyboard,
+                validator: validateDecimal,
               ),
             ),
             const SizedBox(width: 8),
-            TextButton.icon(onPressed: _estimate, icon: const Icon(Icons.calculate), label: const Text('Estimer')),
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: TextButton.icon(onPressed: _estimate, icon: const Icon(Icons.calculate), label: const Text('Estimer')),
+            ),
           ]),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: _photo,
-            decoration: const InputDecoration(labelText: 'Photo (URL)', border: OutlineInputBorder()),
-            keyboardType: TextInputType.url,
-          ),
+          PhotoField(photo: _photo, onChanged: (p) => setState(() => _photo = p)),
           const SizedBox(height: 24),
           Row(children: [
             Text('Ingrédients', style: theme.textTheme.titleLarge),
@@ -238,38 +260,43 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
           for (var k = 0; k < _ingredients.length; k++)
             Padding(
               key: ObjectKey(_ingredients[k]),
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(children: [
-                SizedBox(
-                  width: 64,
-                  child: TextField(
-                    controller: _ingredients[k].qty,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Qté', isDense: true),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                SizedBox(
-                  width: 64,
-                  child: TextField(
-                    controller: _ingredients[k].unit,
-                    decoration: const InputDecoration(labelText: 'Unité', isDense: true),
-                  ),
-                ),
-                const SizedBox(width: 6),
+              padding: const EdgeInsets.only(top: 12),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(
-                  child: TextField(
-                    controller: _ingredients[k].name,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(labelText: 'Ingrédient', isDense: true),
-                  ),
+                  child: Column(children: [
+                    TextFormField(
+                      controller: _ingredients[k].name,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: InputDecoration(labelText: 'Ingrédient ${k + 1}', isDense: true),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Expanded(
+                        child: ComboTextField(
+                          controller: _ingredients[k].qty,
+                          options: quantityOptions,
+                          label: 'Quantité',
+                          keyboardType: decimalKeyboard,
+                          validator: validateDecimal,
+                          dense: true,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ComboTextField(
+                          controller: _ingredients[k].unit,
+                          options: unitOptions,
+                          label: 'Unité',
+                          dense: true,
+                        ),
+                      ),
+                    ]),
+                  ]),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
                   tooltip: 'Retirer',
-                  onPressed: _ingredients.length == 1
-                      ? null
-                      : () => setState(() => _ingredients.removeAt(k).dispose()),
+                  onPressed: _ingredients.length == 1 ? null : () => setState(() => _ingredients.removeAt(k).dispose()),
                 ),
               ]),
             ),
@@ -293,7 +320,7 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
                   child: CircleAvatar(radius: 14, child: Text('${k + 1}', style: const TextStyle(fontSize: 12))),
                 ),
                 Expanded(
-                  child: TextField(
+                  child: TextFormField(
                     controller: _steps[k].text,
                     minLines: 1,
                     maxLines: 4,
@@ -303,11 +330,14 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
                 ),
                 const SizedBox(width: 6),
                 SizedBox(
-                  width: 60,
-                  child: TextField(
+                  width: 92,
+                  child: ComboTextField(
                     controller: _steps[k].duration,
+                    options: stepMinuteOptions,
+                    label: 'min',
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'min'),
+                    validator: validateWhole,
+                    dense: true,
                   ),
                 ),
                 Column(children: [

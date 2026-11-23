@@ -25,6 +25,7 @@ Future<void> main() async {
     shopping: DemoShoppingGateway(),
   );
   await seedDemoRecipesIfEmpty(service.repository, household.currentUserId);
+  await seedDemoMealHistory(service.repository, household.currentUserId, DateTime.now());
 
   runApp(PanierMalinApp(service: service));
 }
