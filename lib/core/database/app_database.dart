@@ -2,6 +2,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
 import '../../features/recipes/data/recipe_schema.dart';
+import '../../features/magasin/data/store_schema.dart';
 
 /// Base locale unique de l'application.
 ///
@@ -12,7 +13,8 @@ class AppDatabase {
   AppDatabase._();
 
   static const fileName = 'panier_malin.db';
-  static const version = 1;
+  // Bump version to 2 when integrating StoreSchema into an existing DB.
+  static const version = 2;
 
   static Future<Database> open({DatabaseFactory? factory, String? path}) async {
     final f = factory ?? databaseFactory;
@@ -31,10 +33,14 @@ class AppDatabase {
   static Future<void> _onCreate(Database db, int version) async {
     // Gestion 3 — Recettes.
     await RecipeSchema.create(db);
+    // Gestion 4 — Magasins.
+    await StoreSchema.create(db);
     // TODO(intégration) : UserSchema.create(db), ProductSchema.create(db), ...
   }
 
   static Future<void> _onUpgrade(Database db, int from, int to) async {
     await RecipeSchema.upgrade(db, from, to);
+    // Gestion 4 — Magasins.
+    await StoreSchema.upgrade(db, from, to);
   }
 }
