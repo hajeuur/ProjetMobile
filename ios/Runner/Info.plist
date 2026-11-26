@@ -66,5 +66,19 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>PanierMalin photographie vos tickets de caisse pour lire les articles et les prix, et vos plats pour illustrer les recettes.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>PanierMalin peut importer une photo de ticket de caisse ou de plat depuis votre galerie.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>PanierMalin utilise le micro pour ajouter des articles à votre liste de courses en les dictant, et pour les commandes vocales du mode cuisine.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>PanierMalin transforme votre voix en texte pour comprendre les articles dictés (« ajoute lait, pain et 6 œufs »).</string>
+	<!-- Gestion 5 : rapport PDF au proche (discussion WhatsApp ou SMS) -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>whatsapp</string>
+		<string>sms</string>
+	</array>
 </dict>
 </plist>
